@@ -20,16 +20,17 @@ library(MCMCvis)
 library(overlapping)
 library(ggplot2)
 library(dplyr)
+library(ggpubr)
 
 # Set working directory (results will be saved in this directory)
-setwd("C:/Users/GNBPU/OneDrive - Bayer/Desktop/Bayer/BIC ECA/Bayesian Dynamic Borrowing/Results")
+#setwd("C:/Users/GNBPU/OneDrive - Bayer/Desktop/Bayer/BIC ECA/Bayesian Dynamic Borrowing/Results")
 
 
 ##################################################################################################
 ##################################################################################################
 # Function
 
-BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau){
+BDB_cont=function(Y, Z, TRT, X, A, a, s, za, K, doubleadj, alpha, beta, tau){
   # BDB_cont() applies Bayesian Dynamic Borrowing double-adjustment method for
   # continuous outcomes. The function is designed for the case when the control
   # arm of a randomized study is augmented with external data.
@@ -53,34 +54,43 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
   # a: tuning parameter for arctangent elastic function (a>=1)
   # s: number of strata of propensity score distribution
   # za: confidence level value
-  # n.iter: number of samples from posterior distribution
+  # K: number of samples from posterior distribution
   # doubleadj: logical value for double-adjustment estimation. Default is TRUE. 
   #            If FALSE, only baseline adjustment is computed.
   # alpha: shape hyper-parameter from gamma prior distribution for the precision  
   # beta : rate hyper-parameter from gamma prior distribution for the precision
   # tau: precision for for the mean prior distribution centered at zero
   #
-  #
   # OUTPUT
-  # theta: 3-by-1 vector of mean difference effect (treatment vs controls) and 
-  #        credible interval for the mean difference
-  # width: length of credible interval
-  # theta_s: 3-by-3 matrix of mean difference and CrI by stratum
   # N0_t: number of external subjects after trimming
   # n_s0: s-by-1 vector of number of external subjects on each stratum 
   # n_s1: s-by-1 vector of number of current subjects on each stratum 
-  # A_eff: approximate number of subjects borrowed from external source
   # v: s-by-1 vector of overlapping coefficients
-  # r: s-by-1 vector of normalized overlapping coefficients 
-  # gamma: s-by-1 vector of baseline discounting factor
+  # r: s-by-1 vector of normalized overlapping coefficients
+  # ESS: s-by-1 vector of effective number of subjects borrowed from external sources by stratum
+  # A_eff: approximate number of subjects borrowed from external source
   # PPP: s-by-1 vector of posterior predictive probability
   # gPPP: s-by-1 vector of transformed PPP used for further discount based on 
   #       outcome differences
+  # gamma: s-by-1 vector of baseline discounting factor
+  # theta_s: 3-by-3 matrix of mean difference and CrI by stratum
+  # theta.m: vector of Bayesian posterior samples
+  # theta_o: 3-by-1 vector of mean difference effect (treatment vs controls) and 
+  #        credible interval for the mean difference
+  # LCrI: length of credible interval
+  # acf_results: ACF results for vector of Bayesian posterior samples (theta.m)
+  #
+  # Printed Outputs
   # figure1: Forest plot of treatment effect by stratum and overall
   # figure2: Plot the overall distribution of propensity scores by group
   # figure3: Plot the overall distribution of propensity scores by stratum
   # figure4: Trace plot of mean difference
-  # figure5: Autocorrelation function from trace plot
+  # figure5: Density plot of posterior samples
+  # figure6: figure4 and figure5 printed together
+  # figure7: Plot of g(PPP) vs PPP for elastic parameter a
+  # figure8: Forest plot of overall outcomes for ICA and ECA
+  # figure9: Forest plot of ICA and ECA outcomes by stratum
+  
   ##################################################################################################
   # Function begins
   # Bayesian model for the calculation of predictive probability of observing 
@@ -198,9 +208,9 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
     N1_s<-sum(data1$Z==1 & data1$TRT==0 & data1$stratum==i) # compare internal against external controls
     dataList<-list("n"=n0_s,"y"=y0_s,"N1"=N1_s, "alpha"=alpha, "beta"=beta, "tau"=tau) 
     # Run MCMC by JAGS (sampling from external data assuming precision from current data)
-    jagsfit <- jags.model(modell, data=dataList, inits=inits, n.chains=1, n.adapt=n.iter) 
+    jagsfit <- jags.model(modell, data=dataList, inits=inits, n.chains=1, n.adapt=K) 
     # Draw MCMC samples
-    out<-coda.samples(model=jagsfit, variable.names = c("theta"), n.iter=n.iter)
+    out<-coda.samples(model=jagsfit, variable.names = c("theta"), n.iter=K)
     out<-do.call(rbind.data.frame, out)
     # Calculate posterior predictive probability
     PPP[i]<-mean(out$theta<e.m[i])
@@ -231,7 +241,7 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
   # Steps 10-11 Analysis/Summary 
   ######################################################################################################
   # Initialize post.mean.samples object 
-  post.mean.samples<-matrix(data=rep(0, s*n.iter), nrow=s, ncol=n.iter)
+  post.mean.samples<-matrix(data=rep(0, s*K), nrow=s, ncol=K)
   theta_hat_s<-matrix(rep(0, 3*s), nrow=3, ncol=s) 
   # Obtain posterior mean samples by strata
   for (i in 1:s){ 
@@ -248,8 +258,8 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
     inits_REP<-function(){ list( mu=mu_, pre=pre_) }
     # Fit model by strata
     fit_Ts <- jags.model(file = "model_REP.txt", data = data_REP, inits = inits_REP, n.chains = 1)
-    update(fit_Ts, n.iter)
-    fit_Ts <- coda.samples(fit_Ts, variable.names = c("mu"), n.iter = n.iter, thin = 1)
+    update(fit_Ts, K)
+    fit_Ts <- coda.samples(fit_Ts, variable.names = c("mu"), n.iter = K, thin = 1)
     outT<-do.call(rbind.data.frame, fit_Ts)
     
     # Internal and external controls
@@ -265,8 +275,8 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
     inits_REP<-function(){ list( mu=mu_, pre=pre_) }
     # Fit model by strata
     fit_Cs <- jags.model(file = "model_REP.txt", data = data_REP, inits = inits_REP, n.chains = 1)
-    update(fit_Cs, n.iter)
-    fit_Cs <- coda.samples(fit_Cs, variable.names = c("mu"), n.iter = n.iter, thin = 1)
+    update(fit_Cs, K)
+    fit_Cs <- coda.samples(fit_Cs, variable.names = c("mu"), n.iter = K, thin = 1)
     outC<-do.call(rbind.data.frame, fit_Cs)
     
     post.mean.samples[i,]<-outT$mu - outC$mu # mean difference
@@ -275,13 +285,13 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
     theta_hat_s[,i]<-c(mean(post.mean.samples[i,]), as.numeric(quantile(post.mean.samples[i,],c(za/2,1-za/2)))) 
   }
   
-  post.mean.dist<-apply(post.mean.samples,2,mean)
+  theta.m<-apply(post.mean.samples,2,mean)
   
-  Estimate<-mean(post.mean.dist) # posterior mean
+  Estimate<-mean(theta.m) # posterior mean
   
-  CrI<-as.numeric(quantile(post.mean.dist,c(za/2,1-za/2))) # credible interval
+  CrI<-as.numeric(quantile(theta.m,c(za/2,1-za/2))) # credible interval
   
-  Width<-CrI[2]-CrI[1] # width of credible interval
+  LCrI<-CrI[2]-CrI[1] # width of credible interval
   
   # Overall estimate and CrI
   theta_o<-c(Estimate, CrI)
@@ -317,26 +327,28 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
   ######################################################################################################
   ######################################################################################################
   # Plot the overall distribution of propensity scores by treatment group
-  fp2<-ggplot(data1, aes(x = prd, fill = factor(Z))) +
-       geom_density(alpha = 0.5) +
-       labs(title = "Propensity Score Distribution by Group",
-         x = "Propensity Score",
-         y = "Density",
-         fill = "Current study") +
-       theme_minimal()
+  df<-data.frame(x = data1$prd, 
+                 Control = c(rep('Current', sum(data1$Z)),rep('External',sum(data1$Z==0))) )
+  
+  fp2<-ggplot(df, aes(x = x, fill = Control)) +
+    geom_density(alpha = 0.7, bw=0.05) +
+    labs(title = 'Propensity Score Distribution by Group', 
+         x='Propensity Score', y='Density') + theme_minimal()
   
   X11()
   print(fp2)
   ######################################################################################################
   ######################################################################################################
   # Plot the overall distribution of propensity scores by stratum
-  fp3<-ggplot(data1, aes(x = prd, fill = factor(Z))) +
+  df<-data.frame(prd = data1$prd, stratum=data1$stratum,
+                 Control = c(rep('Current', sum(data1$Z)),rep('External',sum(data1$Z==0))) )
+  fp3<-ggplot(df, aes(x = prd, fill = Control)) +
     geom_density(alpha = 0.5) +
     facet_wrap(~ stratum, scales='free') +
-    labs(title = "Propensity Score Distribution by Stratum",
+    labs(title = "Propensity Score Distribution by Group and Stratum",
          x = "Propensity Score",
          y = "Density",
-         fill = "Current study") +
+         fill = "Group") +
     theme_minimal()
   
   X11(width = 20, height=8)
@@ -344,7 +356,7 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
   ######################################################################################################
   ######################################################################################################
   # Trace plot of mean difference
-  df<-data.frame(iteration=1:n.iter, theta=post.mean.dist)
+  df<-data.frame(iteration=1:K, theta=theta.m)
   fp4<-ggplot(df, aes(x=iteration, y=theta)) +
        geom_line( color="black", size=0.5, alpha=0.9, linetype=1) +
        xlab('Iteration') + 
@@ -355,18 +367,162 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, n.iter, doubleadj, alpha, beta, tau
   print(fp4)
   ######################################################################################################
   ######################################################################################################
-  # Autocorrelation function for trace plot
-  fp5<-acf(post.mean.dist, plot=F)
+  # Density of posterior samples
+  df<-data.frame(x=theta.m)
+  fp5<-ggplot(df, aes(x) ) +
+    geom_density(alpha = 0.7) +
+    labs(title = 'Density of posterior samples ', 
+         x='theta', y='Density')
+  X11()
+  print(fp5)
+  #####################################################################################################
+  ######################################################################################################
+  
+  fp6 <- ggarrange(fp4, fp5, nrow = 2, ncol = 1)
+  X11()
+  print(fp6)
+  
+  ######################################################################################################
+  ######################################################################################################
+  # Plot - Elastic parameter 
+  ######################################################################################################
+  ######################################################################################################
+  tuning_par=function(alpha, x){atan(a*sin(x*pi))/atan(a) }
+  x<-seq(from=0, to=1, by=0.001)
+  y<-tuning_par(a, x)
+  
+  # Define data frame
+  df<-data.frame(x = x, y = y)
+  
+  fp7<-ggplot(df, aes(x = x, y = y)) + 
+    geom_line() +
+    labs(title = paste('Elastic Function, a =',a), 
+         x='Posterior Predictive Probability (PPP)', y='g(PPP)')
+  X11()
+  print(fp7)
+  ######################################################################################################
+  ######################################################################################################
+  # Plot - Outcome Intervals for ICA and ECA
+  ######################################################################################################
+  ######################################################################################################
+  label <- c('ICA', 'ECA')
+  #calculate mean, standard deviation, and count
+  mean_ICA <- mean(data1$Y[which((data1$Z==1) & (data1$TRT==0))])
+  mean_ECA <- mean(data1$Y[which((data1$Z==0) & (data1$TRT==0))])
+  sd_ICA <- sd(data1$Y[which((data1$Z==1) & (data1$TRT==0))])
+  sd_ECA <- sd(data1$Y[which((data1$Z==0) & (data1$TRT==0))])
+  n_ICA <- length(data1$Y[which((data1$Z==1) & (data1$TRT==0))])
+  n_ECA <- length(data1$Y[which((data1$Z==0) & (data1$TRT==0))])
+  
+  #calculate confidence intervals
+  t_alpha <- 0.05
+  tval_ICA <- qt(1 - t_alpha/2, df = n_ICA - 1)
+  tval_ECA <- qt(1 - t_alpha/2, df = n_ECA - 1)
+  error_margin_ICA <- tval_ICA * (sd_ICA / sqrt(n_ICA))
+  error_margin_ECA <- tval_ECA * (sd_ECA / sqrt(n_ECA))
+  
+  #get 95% CI bounds
+  CI_lower_ICA <- mean_ICA - error_margin_ICA
+  CI_upper_ICA <- mean_ICA + error_margin_ICA
+  CI_lower_ECA <- mean_ECA - error_margin_ECA
+  CI_upper_ECA <- mean_ECA + error_margin_ECA
+  
+  mean  <- c(mean_ICA, mean_ECA) 
+  lower <- c(CI_lower_ICA, CI_lower_ECA) 
+  upper <- c(CI_upper_ICA, CI_upper_ECA)
+  
+  df <- data.frame(label, mean, lower, upper)
+  
+  # Reverse the factor level ordering for labels after coord_flip()
+  df$label <- factor(df$label, levels=rev(df$label))
+  
+  fp8 <- ggplot(data=df, aes(x=label, y=mean, ymin=lower, ymax=upper)) +
+    geom_pointrange(size=1, lwd=1) + 
+    #geom_hline(yintercept=0, lty=2) +  # add a dotted line at x=0 after flip
+    coord_flip() +  # flip coordinates (puts labels on y axis)
+    xlab('') + 
+    ylab('Posterior Mean (95% CrI)') +
+    ggtitle('Overall Outcomes for ICA and ECA') +
+    theme_bw()  # use a white background
   
   X11()
-  plot(fp5, main='theta')
+  print(fp8)
+  ######################################################################################################
+  ######################################################################################################
+  # Plot - Forest plot of ICA and ECA outcomes by stratum
+  ######################################################################################################
+  ######################################################################################################
+  temp<-'Stratum 1'
+  if(s>1){for (i in 2:s){ temp<-c(temp, paste('Stratum', i)) }}
+  temp<-c(temp, temp)
+  label<-temp
+  group<-c(rep('ECA',s), rep('ICA',s))
+  ICA_mean <- c()
+  ECA_mean <- c()
+  ICA_lower <- c()
+  ICA_upper <- c()
+  ECA_lower <- c()
+  ECA_upper <- c()
+  t_alpha <- 0.05
+  for (strat in 1:s) {
+    #subset by stratum
+    df_s <- data1[data1$stratum==strat,]
+    #calculate mean
+    ICA_mean[strat] <- mean(df_s$Y[which((df_s$Z==1) & (df_s$TRT==0))])
+    ECA_mean[strat] <- mean(df_s$Y[which((df_s$Z==0) & (df_s$TRT==0))])
+    #calculate SD
+    ICA_sd <- sd(df_s$Y[which((df_s$Z==1) & (df_s$TRT==0))])
+    ECA_sd <- sd(df_s$Y[which((df_s$Z==0) & (df_s$TRT==0))])
+    #get counts
+    ICA_n <- length(df_s$Y[which((df_s$Z==1) & (df_s$TRT==0))])
+    ECA_n <- length(df_s$Y[which((df_s$Z==0) & (df_s$TRT==0))])
+    #calculate confidence intervals
+    tval_ICA <- qt(1 - t_alpha/2, df = ICA_n - 1)
+    tval_ECA <- qt(1 - t_alpha/2, df = ECA_n - 1)
+    error_margin_ICA <- tval_ICA * (ICA_sd / sqrt(ICA_n))
+    error_margin_ECA <- tval_ECA * (ECA_sd / sqrt(ECA_n))
+    #get 95% CI bounds
+    ICA_lower[strat] <- ICA_mean[strat] - error_margin_ICA
+    ICA_upper[strat] <- ICA_mean[strat] + error_margin_ICA
+    ECA_lower[strat] <- ECA_mean[strat] - error_margin_ECA
+    ECA_upper[strat] <- ECA_mean[strat] + error_margin_ECA
+  }
+  
+  mean_outcome <- c(ECA_mean, ICA_mean)
+  lower <- c(ECA_lower, ICA_lower)
+  upper <- c(ECA_upper, ICA_upper)
+  
+  df <- data.frame(group, label, mean_outcome, lower, upper)
+  
+  # Reverse the factor level ordering for labels after coord_flip()
+  df$label <- factor(df$label, levels=rev(df$label)[1:s])
+  df$group<-factor(df$group, levels=c('ICA', 'ECA'))
+  
+  fp9 <- ggplot(data=df, aes(x=label, y=mean_outcome, ymin=lower, ymax=upper, fill=group)) +
+    geom_linerange(size=5, position=position_dodge(width = 0.25), colour="lightgrey") +
+    geom_point(size=3, shape=21, stroke = 0.25, position=position_dodge(width = 0.25)) +
+    scale_x_discrete(name=" ") +
+    scale_y_continuous(name="Mean Outcome [95% CrI]") +
+    coord_flip() +
+    ggtitle('Outcomes for ICA and ECA by Stratum') +
+    theme_bw()
+  
+  X11()
+  print(fp9)
+  ######################################################################################################
+  ######################################################################################################
+  # Autocorrelation function for trace plot
+  fp10<-acf(theta.m, plot=F)
+  
   ######################################################################################################
   ######################################################################################################
   
-output<-list(theta = theta_o,  width = Width,
-             theta_s = theta_hat_s,
-             N0_t=n0, n_s0=n_s0, n_s1=n_s1, 
-             A_eff=A*sum(r*gPPP), v=v, r=r, gamma=gamma, PPP=PPP, gPPP=gPPP)
+output<-list(N0_t=n0, n_s0=n_s0, n_s1=n_s1, 
+             v=v, r=r, ESS=A*r*gPPP, A_eff=A*sum(r*gPPP), 
+             PPP=PPP, gPPP=gPPP, gamma=gamma,
+             theta_s = theta_hat_s, theta.m = theta.m,
+             theta_o = theta_o, LCrI = LCrI,
+             acf_results = fp10)
              
 output
 }
@@ -436,7 +592,7 @@ data<-data.frame(X, Z, TRT, Y)
 # treatment vs control and borrow information equivalent to A=100 subjects from a external source 
 # of N0=3000 patients
 
-BDB_cont(Y=data$Y, 
+output <- BDB_cont(Y=data$Y, 
          Z=data$Z, 
          TRT=data$TRT, 
          X=data[,c('X1','X2','X3','X4','X5','X6','X7','X8','X9','X10')], 
@@ -444,7 +600,7 @@ BDB_cont(Y=data$Y,
          a=5, 
          s=3, 
          za=0.05, 
-         n.iter=1000,
+         K=1000,
          doubleadj=TRUE,
          alpha=0.01,
          beta=0.01,

@@ -80,7 +80,21 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
   # The treatment effect is defined as the difference of event rates between treatment 
   # and control arms 
   # LCrI: length of credible interval
+  # theta.m: vector of Bayesian posterior samples
+  # acf_results: ACF results for theta.m
   #
+  # Printed Outputs
+  # figure1: Forest plot of treatment effect by stratum and overall
+  # figure2: Plot the overall distribution of propensity scores by group
+  # figure3: Plot the overall distribution of propensity scores by stratum
+  # figure4: Trace plot of mean difference
+  # figure5: Density plot of posterior samples
+  # figure6: figure4 and figure5 printed together
+  # figure7: Plot of g(PPP) vs PPP for elastic parameter a
+  # figure8: Forest plot of overall outcome for ICA and ECA
+  # figure9: Forest plot of ICA and ECA outcomes by stratum
+  
+  ######################################################################################################
   # Function begins
   # Define dataZX, dataset of Z and X
   dataZX<-data.frame(Z, X)
@@ -416,8 +430,8 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     ylab('theta') +
     ggtitle('Trace Plot')
   
-  #X11(width = 20, height=8)
-  #print(fp4)
+  X11(width = 20, height=8)
+  print(fp4)
   
   ######################################################################################################
   ######################################################################################################
@@ -427,8 +441,8 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     geom_density(alpha = 0.7, bw=0.05) +
     labs(title = 'Density of posterior samples ', 
          x='theta', y='Density')
-  #X11()
-  #print(fp5)
+  X11()
+  print(fp5)
   #####################################################################################################
   ######################################################################################################
   
@@ -512,6 +526,10 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     theme_bw()  
   X11()
   print(fp9)
+  ######################################################################################################
+  ######################################################################################################
+  # Autocorrelation function for trace plot
+  fp10<-acf(theta.m, plot=F)
   
   ######################################################################################################
   ######################################################################################################
@@ -522,8 +540,10 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
                r_ica=R_ICA, r_eca=R_ECA,
                v=v, r=r, ESS=A*r*gPPP, A_eff=sum(A*r*gPPP),
                PPP=PPP, gPPP=gPPP, gamma=gamma, 
-               theta_s = theta_s,
-               theta_o = theta_o, LCrI=LCrI)
+               theta_s = theta_s, theta.m = theta.m,
+               theta_o = theta_o, LCrI=LCrI,
+               acf_results = fp10)
+  
   return(output)
   # function ends
 }
@@ -606,3 +626,5 @@ out<-BDB_binary(Y=data$Y,
                 za=0.05,
                 K=1e5,
                 doubleadj=TRUE)
+out$theta_o
+out$A_eff
