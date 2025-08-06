@@ -41,7 +41,7 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, K, doubleadj, alpha, beta, tau){
   # evidence in single-arm clinical studies. 
   # Journal of biopharmaceutical statistics, 29(5), pp.731-748.
   #
-  # Farjat, A., Ji, Y., Kaiser, A., Lu, C., Pap, A., Potts, J., Wang, M. 
+  # Farjat, A., Ji, Y., Kaiser, A., Lu, C., Pap, A., Potts, J., King, B., Wang, M. 
   # A Comprehensive Bayesian Double-Adjustment Approach to Dynamic Borrowing of 
   # External Data. Manuscript in progress.
   #  
