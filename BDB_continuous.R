@@ -23,7 +23,7 @@ library(dplyr)
 library(ggpubr)
 
 # Set working directory (results will be saved in this directory)
-#setwd("C:/Users/GNBPU/OneDrive - Bayer/Desktop/Bayer/BIC ECA/Bayesian Dynamic Borrowing/Results")
+setwd("BDB_file_location")
 
 
 ##################################################################################################
