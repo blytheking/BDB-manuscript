@@ -614,17 +614,15 @@ data<-data.frame(X, Z, TRT, Y)
 # Variable names for the adjustment
 var.names<-c('X1','X2','X3','X4','X5','X6','X7','X8','X9','X10') 
              
-out<-BDB_binary(Y=data$Y, 
-                Z=data$Z, 
-                TRT=data$TRT, 
-                X = data[,var.names], 
-                A = 255, 
-                s=3,
-                a=1,
-                alpha = 0.5, 
-                beta = 0.5,
-                za=0.05,
-                K=1e5,
-                doubleadj=TRUE)
-out$theta_o
-out$A_eff
+output<-BDB_binary(Y=data$Y, 
+                   Z=data$Z, 
+                   TRT=data$TRT, 
+                   X = data[,var.names], 
+                   A = 255, 
+                   s=3,
+                   a=1,
+                   alpha = 0.5, 
+                   beta = 0.5,
+                   za=0.05,
+                   K=1e5,
+                   doubleadj=TRUE)
