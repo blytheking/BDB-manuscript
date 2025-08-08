@@ -23,7 +23,7 @@ library(dplyr)
 library(ggpubr)
 
 # Set working directory (results will be saved in this directory)
-setwd("BDB_file_location")
+# setwd("BDB_file_location")
 
 
 ##################################################################################################
