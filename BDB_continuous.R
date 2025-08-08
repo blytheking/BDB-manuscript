@@ -556,8 +556,8 @@ x0<-rmvnorm(N0,mu0,cov0)
 x1<-rmvnorm(N1,mu1,cov1)
 
 # Convert first four variables into binary variables
-x0[,1:4]<-(x0[,1:4]>0)*1
-x1[,1:4]<-(x1[,1:4]>0)*1
+x0[,1:4]<-(x0[,1:4]>1)*1
+x1[,1:4]<-(x1[,1:4]>1)*1
 
 # True coefficients 
 beta<-c(0.2,0.4,0.1,0.3,1,1,1,1,1,1)
