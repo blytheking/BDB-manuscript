@@ -430,9 +430,6 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     ylab('theta') +
     ggtitle('Trace Plot')
   
-  X11(width = 20, height=8)
-  print(fp4)
-  
   ######################################################################################################
   ######################################################################################################
   # Density of posterior samples
@@ -441,8 +438,7 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     geom_density(alpha = 0.7, bw=0.05) +
     labs(title = 'Density of posterior samples ', 
          x='theta', y='Density')
-  X11()
-  print(fp5)
+
   #####################################################################################################
   ######################################################################################################
   
@@ -526,10 +522,6 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
     theme_bw()  
   X11()
   print(fp9)
-  ######################################################################################################
-  ######################################################################################################
-  # Autocorrelation function for trace plot
-  fp10<-acf(theta.m, plot=F)
   
   ######################################################################################################
   ######################################################################################################
@@ -541,8 +533,7 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
                v=v, r=r, ESS=A*r*gPPP, A_eff=sum(A*r*gPPP),
                PPP=PPP, gPPP=gPPP, gamma=gamma, 
                theta_s = theta_s, theta.m = theta.m,
-               theta_o = theta_o, LCrI=LCrI,
-               acf_results = fp10)
+               theta_o = theta_o, LCrI=LCrI)
   
   return(output)
   # function ends
