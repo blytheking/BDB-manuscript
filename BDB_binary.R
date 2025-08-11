@@ -81,14 +81,13 @@ BDB_binary=function(Y, Z, TRT, X, A, a, s, alpha, beta, za, K, doubleadj){
   # and control arms 
   # LCrI: length of credible interval
   # theta.m: vector of Bayesian posterior samples
-  # acf_results: ACF results for theta.m
   #
   # Printed Outputs
   # figure1: Forest plot of treatment effect by stratum and overall
   # figure2: Plot the overall distribution of propensity scores by group
   # figure3: Plot the overall distribution of propensity scores by stratum
-  # figure4: Trace plot of mean difference
-  # figure5: Density plot of posterior samples
+  # figure4: Trace plot of mean difference (not displayed)
+  # figure5: Density plot of posterior samples (not displayed)
   # figure6: figure4 and figure5 printed together
   # figure7: Plot of g(PPP) vs PPP for elastic parameter a
   # figure8: Forest plot of overall outcome for ICA and ECA

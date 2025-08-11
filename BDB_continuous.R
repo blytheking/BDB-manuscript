@@ -78,14 +78,13 @@ BDB_cont=function(Y, Z, TRT, X, A, a, s, za, K, doubleadj, alpha, beta, tau){
   # theta_o: 3-by-1 vector of mean difference effect (treatment vs controls) and 
   #        credible interval for the mean difference
   # LCrI: length of credible interval
-  # acf_results: ACF results for vector of Bayesian posterior samples (theta.m)
   #
   # Printed Outputs
   # figure1: Forest plot of treatment effect by stratum and overall
   # figure2: Plot the overall distribution of propensity scores by group
   # figure3: Plot the overall distribution of propensity scores by stratum
-  # figure4: Trace plot of mean difference
-  # figure5: Density plot of posterior samples
+  # figure4: Trace plot of mean difference (not displayed)
+  # figure5: Density plot of posterior samples (not displayed)
   # figure6: figure4 and figure5 printed together
   # figure7: Plot of g(PPP) vs PPP for elastic parameter a
   # figure8: Forest plot of overall outcomes for ICA and ECA
